@@ -1,0 +1,29 @@
+[
+  {
+    "select-types": [
+      "sequence-nextval",
+      "arrays-of-map",
+      "map",
+      "string",
+      "int",
+      "long",
+      "float",
+      "double",
+      "boolean"
+    ]
+  },
+  {
+    "source-name": "select-test-table",
+    "query-pattern": "select #columns# from t",
+    "sources": [
+      { "name": "test_table", "alias": "t" }
+    ],
+    "columns": [
+      { "name": "id", "as": "questionId", "type": "number" },
+      { "name": "t.column_a", "type": "string" },
+      { "name": "t.column_b", "type": "number" },
+      { "name": "t.column_c", "type": "boolean" },
+      { "name": "t.column_d", "type": "timestamp" }
+    ]
+  }
+]
