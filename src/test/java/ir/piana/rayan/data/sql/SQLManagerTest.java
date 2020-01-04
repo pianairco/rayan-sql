@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import ir.piana.rayan.data.model.TestTableEntity;
+import ir.piana.rayan.data.serializer.RayanJsonDeserializer;
+import ir.piana.rayan.data.serializer.RayanJsonSerializer;
 import oracle.sql.TIMESTAMP;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -84,100 +86,12 @@ public class SQLManagerTest {
                         jsonGenerator.writeString(timestamp.stringValue());
                     }
                 });
-                simpleModule.addSerializer(TestTableEntity.class, new JsonSerializer<TestTableEntity>() {
-                    @Override
-                    public void serialize(TestTableEntity testTableEntity, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-//                        Field[] fields = testTableEntity.getClass().getFields();
-                        Method[] methods = testTableEntity.getClass().getDeclaredMethods();
-                        StringBuffer stringBuffer = new StringBuffer("{");
-                        boolean doDelete = false;
-                        for(Method method : methods) {
-                            Column column = null;
-                            if((method.getName().startsWith("get") || method.getName().startsWith("is")) && (column = method.getAnnotation(Column.class)) != null) {
-                                try {
-                                    doDelete = true;
-                                    String left = "\"" + column.name() + "\"";
-                                    Object object = method.invoke(testTableEntity);
-                                    Class<?> returnType = method.getReturnType();
-                                    String right = null;
-                                    if(returnType == String.class)
-                                        right = "\"" + String.format("%s", object) + "\"";
-                                    else if(returnType == Timestamp.class)
-                                        right = "\"" + String.format("%s", object) + "\"";
-                                    else if(returnType == boolean.class || returnType == Boolean.class) {
-                                        right = String.format("%s", ((Boolean)object) == true ? 1 : 0);
-                                    } else {
-                                        right = String.format("%s", object);
-                                    }
-                                    if(right != null)
-                                        stringBuffer.append(left + ": " + right + ", ");
-                                } catch (IllegalAccessException e) {
-                                    e.printStackTrace();
-                                } catch (InvocationTargetException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                        if(doDelete)
-                            stringBuffer.deleteCharAt(stringBuffer.length() - 2);
-                        String s = stringBuffer.append("}").toString();
-                        jsonGenerator.writeRaw(s);
-                    }
-                });
-                simpleModule.addDeserializer(TestTableEntity.class, new JsonDeserializer<TestTableEntity>() {
+                simpleModule.addSerializer(TestTableEntity.class, new RayanJsonSerializer<TestTableEntity>());
+
+                simpleModule.addDeserializer(TestTableEntity.class, new RayanJsonDeserializer<TestTableEntity>() {
                     @Override
                     public TestTableEntity deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
-                        ObjectCodec oc = jsonParser.getCodec();
-//                        ((ObjectMapper)oc).valueToTree(jsonParser.getValueAsString());
-                        JsonNode snode = oc.readTree(jsonParser);
-                        ObjectNode node = ((ObjectMapper) oc).readValue(snode.asText(), ObjectNode.class);
-                        Method[] methods = TestTableEntity.class.getDeclaredMethods();
-                        TestTableEntity testTableEntity = new TestTableEntity();
-                        for(Method method : methods) {
-                            Column column = null;
-                            if((column = method.getAnnotation(Column.class)) != null) {
-                                try {
-                                    Method setdMethod = null;
-                                    Class<?> parameterType = method.getReturnType();
-                                    if (parameterType == String.class) {
-                                        setdMethod = getSetMethod(method, String.class);
-                                        setdMethod.invoke(testTableEntity, node.get(column.name()).asText());
-                                    } else if (parameterType == Timestamp.class) {
-                                        setdMethod = getSetMethod(method, Timestamp.class);
-                                        Timestamp timestamp = Timestamp.valueOf(node.get(column.name()).asText());
-                                        setdMethod.invoke(testTableEntity, timestamp);
-                                    } else if (parameterType == Integer.class){
-                                        setdMethod = getSetMethod(method, Integer.class);
-                                        int i = node.get(column.name()).asInt();
-                                        setdMethod.invoke(testTableEntity, i);
-                                    } else if (parameterType == int.class){
-                                        setdMethod = getSetMethod(method, int.class);
-                                        int i = node.get(column.name()).asInt();
-                                        setdMethod.invoke(testTableEntity, i);
-                                    } else if (parameterType == Boolean.class){
-                                        setdMethod = getSetMethod(method, Boolean.class);
-                                        Boolean i = node.get(column.name()).asBoolean();
-                                        setdMethod.invoke(testTableEntity, i);
-                                    } else if (parameterType == boolean.class){
-                                        setdMethod = getSetMethod(method, boolean.class);
-                                        boolean i = node.get(column.name()).asBoolean();
-                                        setdMethod.invoke(testTableEntity, i);
-                                    }
-                                    else if (parameterType == Long.class || parameterType == long.class){
-                                        setdMethod = getSetMethod(method, Long.class);
-                                        long l = node.get(column.name()).asLong();
-                                        setdMethod.invoke(testTableEntity, l);
-                                    }
-                                } catch (NoSuchMethodException e) {
-                                    e.printStackTrace();
-                                } catch (IllegalAccessException e) {
-                                    e.printStackTrace();
-                                } catch (InvocationTargetException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                        return testTableEntity;
+                        return this.deserialize(TestTableEntity.class, jsonParser, deserializationContext);
                     }
                 });
                 simpleModule.addDeserializer(Map.class, new JsonDeserializer<Map>() {
@@ -185,8 +99,6 @@ public class SQLManagerTest {
                     public Map deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
                         ObjectCodec oc = jsonParser.getCodec();
                         JsonNode node = oc.readTree(jsonParser);
-
-
                         return null;
                     }
                 });
@@ -220,7 +132,8 @@ public class SQLManagerTest {
 //        Assert.assertNotNull(selectQuery);
     }
 
-    public static Method getSetMethod(Method method, Class parameterType) throws NoSuchMethodException {
+    public static Method getSetMethod(Method method, Class parameterType)
+            throws NoSuchMethodException {
         Method setdMethod = null;
         if (method.getName().startsWith("get")) {
             setdMethod = TestTableEntity.class.getDeclaredMethod("set".concat(method.getName().substring(3)), parameterType);
