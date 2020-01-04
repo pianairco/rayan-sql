@@ -21,7 +21,7 @@ public class TestTableEntity {
 
     private Timestamp columnD;
 
-    @Column(name = "id")
+    @Column(name = "question_id")
     public Long getId() {
         return id;
     }

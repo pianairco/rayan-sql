@@ -99,10 +99,18 @@ public class SQLManagerTest {
                                     String left = "\"" + column.name() + "\"";
                                     Object object = method.invoke(testTableEntity);
                                     Class<?> returnType = method.getReturnType();
-                                    String right = String.format("%s", object);
-                                    if(returnType.getSimpleName().equalsIgnoreCase("String") || returnType.getSimpleName().equalsIgnoreCase("Timestamp"))
+                                    String right = null;
+                                    if(returnType == String.class)
                                         right = "\"" + String.format("%s", object) + "\"";
-                                    stringBuffer.append(left + ": " + right + ", ");
+                                    else if(returnType == Timestamp.class)
+                                        right = "\"" + String.format("%s", object) + "\"";
+                                    else if(returnType == boolean.class || returnType == Boolean.class) {
+                                        right = String.format("%s", ((Boolean)object) == true ? 1 : 0);
+                                    } else {
+                                        right = String.format("%s", object);
+                                    }
+                                    if(right != null)
+                                        stringBuffer.append(left + ": " + right + ", ");
                                 } catch (IllegalAccessException e) {
                                     e.printStackTrace();
                                 } catch (InvocationTargetException e) {
@@ -113,7 +121,7 @@ public class SQLManagerTest {
                         if(doDelete)
                             stringBuffer.deleteCharAt(stringBuffer.length() - 2);
                         String s = stringBuffer.append("}").toString();
-                        jsonGenerator.writeString(s);
+                        jsonGenerator.writeRaw(s);
                     }
                 });
                 simpleModule.addDeserializer(TestTableEntity.class, new JsonDeserializer<TestTableEntity>() {
@@ -188,7 +196,7 @@ public class SQLManagerTest {
                 testTableEntity.setId(1l);
                 testTableEntity.setColumnA("a");
                 testTableEntity.setColumnB(1);
-                testTableEntity.setColumnC(true);
+                testTableEntity.setColumnC(false);
                 testTableEntity.setColumnD(new Timestamp(System.currentTimeMillis()));
 
                 String jsonResult = mapper.writerWithDefaultPrettyPrinter()
