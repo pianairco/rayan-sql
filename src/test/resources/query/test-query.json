@@ -13,15 +13,25 @@
     ],
     "source-name": "select-test-table",
     "query-pattern": "select #columns# from t",
+    "entity-class": "ir.rayan.dev.data.model.TestTableEntity",
     "sources": [
       { "name": "test_table", "alias": "t" }
     ],
     "columns": [
-      { "name": "t.id", "as": "questionId", "type": "number" },
+      { "name": "t.id", "type": "number" },
       { "name": "t.column_a", "type": "string" },
       { "name": "t.column_b", "type": "number" },
       { "name": "t.column_c", "type": "boolean" },
       { "name": "t.column_d", "type": "timestamp" }
+    ]
+  },
+  {
+    "source-name": "select-hibernate-sequence-nextval",
+    "entity-class": "java.lang.Long",
+    "select-type": "long",
+    "query-pattern": "select #columns# from dual",
+    "columns": [
+      { "name": "hibernate_sequence.nextval ", "as": "questionId", "type": "number" }
     ]
   }
 ]
